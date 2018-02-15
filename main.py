@@ -1,10 +1,9 @@
-import os
-import numpy as np
 import tensorflow as tf
 
-from utils import pp
-from models import NVDM, NASM
+from models.nasm import NASM
+from models.nvdm import NVDM
 from reader import TextReader
+from utils import pp
 
 flags = tf.app.flags
 flags.DEFINE_float("learning_rate", 0.001, "Learning rate of adam optimizer [0.001]")
@@ -20,31 +19,33 @@ flags.DEFINE_boolean("forward_only", False, "False for training, True for testin
 FLAGS = flags.FLAGS
 
 MODELS = {
-  'nvdm': NVDM,
-  'nasm': NASM,
+    'nvdm': NVDM,
+    'nasm': NASM,
 }
 
+
 def main(_):
-  pp.pprint(flags.FLAGS.__flags)
+    pp.pprint(flags.FLAGS.__flags)
 
-  data_path = "./data/%s" % FLAGS.dataset
-  reader = TextReader(data_path)
+    data_path = "./data/%s" % FLAGS.dataset
+    reader = TextReader(data_path)
 
-  with tf.Session() as sess:
-    m = MODELS[FLAGS.model]
-    model = m(sess, reader, dataset=FLAGS.dataset,
-              embed_dim=FLAGS.embed_dim, h_dim=FLAGS.h_dim,
-              learning_rate=FLAGS.learning_rate, max_iter=FLAGS.max_iter,
-              checkpoint_dir=FLAGS.checkpoint_dir)
+    with tf.Session() as sess:
+        m = MODELS[FLAGS.model]
+        model = m(sess, reader, dataset=FLAGS.dataset,
+                  embed_dim=FLAGS.embed_dim, h_dim=FLAGS.h_dim,
+                  learning_rate=FLAGS.learning_rate, max_iter=FLAGS.max_iter,
+                  checkpoint_dir=FLAGS.checkpoint_dir)
 
-    if FLAGS.forward_only:
-      model.load(FLAGS.checkpoint_dir)
-    else:
-      model.train(FLAGS)
+        if FLAGS.forward_only:
+            model.load(FLAGS.checkpoint_dir)
+        else:
+            model.train(FLAGS)
 
-    while True:
-      text = raw_input(" [*] Enter text to test: ")
-      model.sample(5, text)
+        while True:
+            text = input(" [*] Enter text to test: ")
+            model.sample(5, text)
+
 
 if __name__ == '__main__':
-  tf.app.run()
+    tf.app.run()
