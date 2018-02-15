@@ -10,8 +10,8 @@ class NASM(Model):
     """Neural Answer Selection Model"""
 
     def __init__(self, sess, reader, dataset="ptb",
-                 batch_size=20, num_steps=3, embed_dim=500,
-                 h_dim=50, learning_rate=0.01, epoch=50,
+                 batch_size=128, num_steps=3, embed_dim=300,
+                 h_dim=300, learning_rate=0.01, epoch=200,
                  checkpoint_dir="checkpoint"):
         """Initialize Neural Varational Document Model.
 

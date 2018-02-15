@@ -2,7 +2,11 @@ import time
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.ops.rnn_cell_impl import _linear as linear
+
+try:
+    from tensorflow.python.ops.core_rnn_cell_impl import _linear as linear
+except:
+    from tensorflow.contrib.rnn.python.ops.core_rnn_cell import _linear as linear
 
 from models.base import Model
 
@@ -11,8 +15,8 @@ class NVDM(Model):
     """Neural Varational Document Model"""
 
     def __init__(self, sess, reader, dataset="ptb",
-                 decay_rate=0.96, decay_step=10000, embed_dim=500,
-                 h_dim=50, learning_rate=0.001, max_iter=450000,
+                 decay_rate=0.96, decay_step=10000, embed_dim=300,
+                 h_dim=300, learning_rate=0.001, max_iter=314040*100,
                  checkpoint_dir="checkpoint"):
         """Initialize Neural Varational Document Model.
 
@@ -146,19 +150,19 @@ class NVDM(Model):
                 [self.optim, self.loss, self.mu, self.sigma, self.h, merged_sum],
                 feed_dict={self.x: x, self.x_idx: x_idx})
 
-            if step % 2 == 0:
+            if step % 10 == 0:
                 writer.add_summary(summary_str, step)
 
-            if step % 10 == 0:
+            if step % 1000 == 0:
                 print("Step: [%4d/%4d] time: %4.4f, loss: %.8f" \
                       % (step, self.max_iter, time.time() - start_time, loss))
                 # print("Step: [%4d/%4d] time: %4.4f, loss: %.8f, e_loss: %.8f, g_loss: %.8f" \
                 #    % (step, self.max_iter, time.time() - start_time, e_loss + g_loss, e_loss, g_loss))
 
-            if step % 5000 == 0:
+            if step % 50000 == 0:
                 self.save(self.checkpoint_dir, step)
 
-            if step % 10000 == 0:
+            if step % 50000 == 0:
                 print("valid perplexity: %s" % self.validate())
                 self.sample(3, "no pets")
 

@@ -25,7 +25,7 @@ MODELS = {
 
 
 def main(_):
-    pp.pprint(flags.FLAGS.__flags)
+    pp.pprint(flags.FLAGS.flag_values_dict())
 
     data_path = "./data/%s" % FLAGS.dataset
     reader = TextReader(data_path)
