@@ -1,7 +1,8 @@
 import time
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
+
 from models.base import Model
 
 
@@ -88,7 +89,7 @@ class NASM(Model):
             e = -tf.matmul(tf.matmul(self.h, R, transpose_b=True), x_i) + b
             self.p_x_i = tf.squeeze(tf.nn.softmax(e))
 
-    def train(self, config):
+    def train(self):
         start_time = time.time()
 
         merged_sum = tf.summary.merge_all()
@@ -97,10 +98,12 @@ class NASM(Model):
         tf.initialize_all_variables().run()
         self.load(self.checkpoint_dir)
 
+        step = 0
         for epoch in range(self.epoch):
             epoch_loss = 0.
 
             for idx, x in enumerate(self.reader.next_batch()):
+                step += 1
                 _, loss, e_loss, g_loss, summary_str = self.sess.run(
                     [self.optim, self.loss, self.e_loss, self.g_loss, merged_sum], feed_dict={self.x: x})
 

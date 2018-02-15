@@ -1,3 +1,4 @@
+import pdb
 import time
 
 import numpy as np
@@ -5,10 +6,7 @@ import tensorflow as tf
 
 from models.base import Model
 
-try:
-    linear = tf.nn.rnn_cell.linear
-except:
-    from tensorflow.python.ops.rnn_cell import _linear as linear
+from tensorflow.python.ops.rnn_cell_impl import _linear as linear
 
 
 class NVDM(Model):
@@ -87,19 +85,23 @@ class NVDM(Model):
     def build_encoder(self):
         """Inference Network. q(h|X)"""
         with tf.variable_scope("encoder"):
-            self.l1_lin = linear(tf.expand_dims(self.x, 0), self.embed_dim, bias=True, scope="l1")
+            with tf.variable_scope("l1"):
+                self.l1_lin = linear(tf.expand_dims(self.x, 0), self.embed_dim, bias=True)
             self.l1 = tf.nn.relu(self.l1_lin)
 
-            self.l2_lin = linear(self.l1, self.embed_dim, bias=True, scope="l2")
+            with tf.variable_scope("l2"):
+                self.l2_lin = linear(self.l1, self.embed_dim, bias=True)
             self.l2 = tf.nn.relu(self.l2_lin)
 
-            self.mu = linear(self.l2, self.h_dim, bias=True, scope="mu")
-            self.log_sigma_sq = linear(self.l2, self.h_dim, bias=True, scope="log_sigma_sq")
+            with tf.variable_scope("mu"):
+                self.mu = linear(self.l2, self.h_dim, bias=True)
+            with tf.variable_scope("log_sigma_sq"):
+                self.log_sigma_sq = linear(self.l2, self.h_dim, bias=True)
 
             self.eps = tf.random_normal((1, self.h_dim), 0, 1, dtype=tf.float32)
             self.sigma = tf.sqrt(tf.exp(self.log_sigma_sq))
 
-            self.h = tf.add(self.mu, tf.matmul(self.sigma, self.eps))
+            self.h = tf.add(self.mu, tf.matmul(self.sigma, self.eps, transpose_b=True))
 
             _ = tf.summary.histogram("mu", self.mu)
             _ = tf.summary.histogram("sigma", self.sigma)
@@ -117,9 +119,9 @@ class NVDM(Model):
 
     def train(self, config):
         merged_sum = tf.summary.merge_all()
-        writer = tf.summary.FileWriter("./logs/%s" % self.get_model_dir(), self.sess.graph_def)
+        writer = tf.summary.FileWriter("./logs/%s" % self.get_model_dir(), self.sess.graph)
 
-        tf.initialize_all_variables().run()
+        tf.global_variables_initializer().run()
         self.load(self.checkpoint_dir)
 
         start_time = time.time()
@@ -127,7 +129,7 @@ class NVDM(Model):
 
         iterator = self.reader.iterator()
         for step in range(start_iter, start_iter + self.max_iter):
-            x, x_idx = iterator.next()
+            x, x_idx = next(iterator)
 
             """The paper update the parameters alternatively but in this repo I used oneshot update.
       

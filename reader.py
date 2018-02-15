@@ -2,6 +2,7 @@ import itertools
 import os
 from collections import Counter
 
+import nltk
 from nltk.tokenize import TreebankWordTokenizer
 
 from utils import *
@@ -16,6 +17,8 @@ class TextReader(object):
         test_path = os.path.join(data_path, "test.txt")
         vocab_path = os.path.join(data_path, "vocab.pkl")
 
+        self.tokenizer = TreebankWordTokenizer()
+
         if os.path.exists(vocab_path):
             self._load(vocab_path, train_path, valid_path, test_path)
         else:
@@ -27,12 +30,16 @@ class TextReader(object):
         self.idx2word = {v: k for k, v in self.vocab.items()}
         self.vocab_size = len(self.vocab)
 
-    def _read_text(self, file_path):
+    def _read_text_to_toks(self, file_path):
+        l = []
         with open(file_path) as f:
-            return f.read().replace("\n", " %s " % EOS_TOKEN)
+            for line in f:
+                toks = self.tokenize(line)
+                l.extend(toks)
+        return l
 
     def _build_vocab(self, file_path, vocab_path):
-        counter = Counter(self._read_text(file_path).split())
+        counter = Counter(self._read_text_to_toks(file_path))
 
         count_pairs = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
         words, _ = list(zip(*count_pairs))
@@ -41,10 +48,11 @@ class TextReader(object):
         save_pkl(vocab_path, self.vocab)
 
     def _file_to_data(self, file_path):
-        texts = self._read_text(file_path).split(EOS_TOKEN)
         data = []
-        for text in texts:
-            data.append(np.array(map(self.vocab.get, text.split())))
+        with open(file_path) as f:
+            for text in f:
+                data.append(np.array(list(map(self.vocab.get,
+                                              nltk.tokenize.word_tokenize(text.strip().lower())))))
 
         save_npy(file_path + ".npy", data)
         return data
@@ -75,15 +83,17 @@ class TextReader(object):
 
     def iterator(self, data_type="train"):
         raw_data = self.get_data_from_type(data_type)
-        return itertools.cycle(([self.onehot(data), data] for data in raw_data if data != []))
+        return itertools.cycle([[self.onehot(data), data] for data in raw_data if data != []])
 
-    def get(self, text=["medical"]):
-        if type(text) == str:
-            text = text.lower()
-            text = TreebankWordTokenizer().tokenize(text)
+    def tokenize(self, text):
+        text = text.strip().lower()
+        toks = self.tokenizer.tokenize(text)
+        return toks
 
+    def get(self, text):
+        toks = self.tokenize(text)
         try:
-            data = np.array(map(self.vocab.get, text))
+            data = np.array(list(map(self.vocab.get, toks)))
             return self.onehot(data), data
         except:
             unknowns = []

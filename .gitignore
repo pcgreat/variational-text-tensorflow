@@ -88,3 +88,9 @@ Session.vim
 *~
 
 .idea/
+.pkl
+.npy
+chattrans_skipthought.txt
+test.txt
+train.txt
+valid.txt
