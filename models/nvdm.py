@@ -1,12 +1,10 @@
-import pdb
 import time
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.ops.rnn_cell_impl import _linear as linear
 
 from models.base import Model
-
-from tensorflow.python.ops.rnn_cell_impl import _linear as linear
 
 
 class NVDM(Model):
@@ -157,17 +155,29 @@ class NVDM(Model):
                 # print("Step: [%4d/%4d] time: %4.4f, loss: %.8f, e_loss: %.8f, g_loss: %.8f" \
                 #    % (step, self.max_iter, time.time() - start_time, e_loss + g_loss, e_loss, g_loss))
 
-            if step % 500 == 0:
+            if step % 5000 == 0:
                 self.save(self.checkpoint_dir, step)
 
-                if self.dataset == "ptb":
-                    self.sample(3, "costs")
-                    self.sample(3, "chemical company")
-                    self.sample(3, "government violated")
-                elif self.dataset == "toy":
-                    self.sample(3, "a")
-                    self.sample(3, "g")
-                    self.sample(3, "k")
+            if step % 10000 == 0:
+                print("valid perplexity: %s" % self.validate())
+                self.sample(3, "no pets")
+
+    def validate(self, sample_size=3, valid_max_iter=1000):
+        iterator = self.reader.iterator("valid")
+        start_iter = self.step.eval()
+        perps = []
+        for step in range(start_iter, start_iter + valid_max_iter):
+            x, x_idx = next(iterator)
+            cur_ps = self.sess.run(self.p_x_i, feed_dict={self.x: x})
+            word_idxs = np.array(cur_ps).argsort()[-sample_size:][::-1]
+            ps = cur_ps[word_idxs]
+            p = 1
+            for idx, (cur_p, word_idx) in enumerate(zip(ps, word_idxs)):
+                # print("  [%d] %-20s: %.8f" % (idx + 1, self.reader.idx2word[word_idx], cur_p))
+                p *= cur_p
+                perp = -np.log(p)
+                perps.append(perp)
+        return np.mean(perps)
 
     def sample(self, sample_size=20, text=None):
         """Sample the documents."""

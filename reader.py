@@ -1,8 +1,8 @@
 import itertools
 import os
+import pdb
 from collections import Counter
 
-import nltk
 from nltk.tokenize import TreebankWordTokenizer
 
 from utils import *
@@ -40,9 +40,9 @@ class TextReader(object):
 
     def _build_vocab(self, file_path, vocab_path):
         counter = Counter(self._read_text_to_toks(file_path))
+        words = [w for (w, f) in counter.most_common(20000)]  # vocab size
+        words.insert(0, "<unk>")
 
-        count_pairs = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
-        words, _ = list(zip(*count_pairs))
         self.vocab = dict(zip(words, range(len(words))))
 
         save_pkl(vocab_path, self.vocab)
@@ -51,8 +51,8 @@ class TextReader(object):
         data = []
         with open(file_path) as f:
             for text in f:
-                data.append(np.array(list(map(self.vocab.get,
-                                              nltk.tokenize.word_tokenize(text.strip().lower())))))
+                data.append(np.array(list(map(lambda x: self.vocab.get(x, 0),
+                                              self.tokenize(text)))))
 
         save_npy(file_path + ".npy", data)
         return data
@@ -93,7 +93,7 @@ class TextReader(object):
     def get(self, text):
         toks = self.tokenize(text)
         try:
-            data = np.array(list(map(self.vocab.get, toks)))
+            data = np.array(list(map(lambda x: self.vocab.get(x, 0), toks)))
             return self.onehot(data), data
         except:
             unknowns = []
