@@ -2,7 +2,10 @@ import time
 
 import numpy as np
 import tensorflow as tf
-
+try:
+    from tensorflow.python.ops.core_rnn_cell_impl import _linear as linear
+except:
+    from tensorflow.contrib.rnn.python.ops.core_rnn_cell import _linear as linear
 from models.base import Model
 
 
@@ -61,14 +64,12 @@ class NASM(Model):
     def build_encoder(self):
         """Inference Network. q(h|X)"""
         with tf.variable_scope("encoder"):
-            q_cell = tf.nn.rnn_cell.LSTMCell(self.embed_dim, self.vocab_size)
-            a_cell = tf.nn.rnn_cell.LSTMCell(self.embed_dim, self.vocab_size)
 
-            l1 = tf.nn.relu(tf.nn.rnn_cell.linear(tf.expand_dims(self.x, 0), self.embed_dim, bias=True, scope="l1"))
-            l2 = tf.nn.relu(tf.nn.rnn_cell.linear(l1, self.embed_dim, bias=True, scope="l2"))
+            l1 = tf.nn.relu(linear(tf.expand_dims(self.q, 0), self.embed_dim, bias=True, scope="l1"))
+            l2 = tf.nn.relu(linear(l1, self.embed_dim, bias=True, scope="l2"))
 
-            self.mu = tf.nn.rnn_cell.linear(l2, self.h_dim, bias=True, scope="mu")
-            self.log_sigma_sq = tf.nn.rnn_cell.linear(l2, self.h_dim, bias=True, scope="log_sigma_sq")
+            self.mu = linear(l2, self.h_dim, bias=True, scope="mu")
+            self.log_sigma_sq = linear(l2, self.h_dim, bias=True, scope="log_sigma_sq")
 
             eps = tf.random_normal((1, self.h_dim), 0, 1, dtype=tf.float32)
             sigma = tf.sqrt(tf.exp(self.log_sigma_sq))
